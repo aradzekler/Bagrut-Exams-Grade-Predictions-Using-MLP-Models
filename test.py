@@ -60,8 +60,8 @@ def train_and_test_div(df):
 
         
 
-data_folder_xlsx = Path("C:/Users/97254/Desktop/deepLearningCourseProject/schoolDbEng.xlsx")
-data_folder_csv = Path("C:/Users/97254/Desktop/deepLearningCourseProject/schoolDBcsv.csv")
+data_folder_xlsx = Path("schoolDbEng.xlsx")
+data_folder_csv = Path("schoolDBcsv.csv")
 #xlsx_to_csv(data_folder_xlsx, data_folder_csv)
 
 school_dataset = pd.read_csv(data_folder_csv, encoding='utf-8')
