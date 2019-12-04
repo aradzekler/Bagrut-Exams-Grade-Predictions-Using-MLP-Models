@@ -44,8 +44,8 @@ def refactor_data_frame(data_frame):
 
     # changing column names for easier work.
     data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
-                       'Number of Testees': 'num_of_testees',
-                       'Yehidut Limud': 'yehidot_l',
+                       'Number of Testees': 'num_of_testers',
+                       'Yehidut Limud': 'units',
                        'Graduation': 'grad_year',
                        'Profession': 'profession',
                        'City Name': 'city_name',
@@ -77,8 +77,8 @@ plt.show()
 '''
 
 # features
-categorical_vars = ['city_id', 'school_id', 'yehidot_l', 'profession', 'grad_year']
-continuous_vars = ['avg_final_grades', 'num_of_testees', ]
+categorical_vars = ['city_id', 'school_id', 'units', 'profession', 'grad_year']
+continuous_vars = ['avg_final_grades', 'num_of_testers', ]
 
 df = pd.DataFrame(school_data_set)  # dataframe for easier handling of the data.
 refactor_data_frame(df)
