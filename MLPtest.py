@@ -38,11 +38,11 @@ DEFINE SCALER
 # standard scaler doesnt work well here because our data is not distributed
 # minmax scaler doesnt work well because it shrinks some of the data too much so numbers are rounded up to 0 or 1.
 # the robust scaler works pretty well and arranges our data between -10 and 10, is nice!
-Y = df['avg_final_grades'].copy()  # Y label: dependent variable avg_final_grades
-X = df.drop(columns=['profession', 'city_name', 'school_name'])  # X label: features, dropping named features
-print(X)
-X = X.to_numpy()  # need to convert the dataframe to a numpy array because of native function.
-scaler = Scalers.RobustScaler().fit(X).transform(X)
+Y_s = df['avg_final_grades'].copy()  # Y label: dependent variable avg_final_grades
+X_s = df.drop(columns=['profession', 'city_name', 'school_name'])  # X label: features, dropping named features
+print(X_s)
+X = X_s.to_numpy()  # need to convert the dataframe to a numpy array because of native function.
+scaler = Scalers.RobustScaler().fit(X_s).transform(X_s)
 print(scaler)
 
 '''
@@ -83,8 +83,6 @@ Biases = {
 '''
 DEFINING THE MODEL
 '''
-
-
 # name_scope is a context manager which allows us to refer to tensors and how the graph shows in TensorBoard
 # activation functions inside hidden layer are ReLu and function in the output layer is Sigmoid.
 def multilayer_perceptron_model(X, W, b):
