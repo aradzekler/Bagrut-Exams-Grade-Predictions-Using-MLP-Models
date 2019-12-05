@@ -35,7 +35,7 @@ class ShuffleSplit():
                    permutation[:n_test])
 
 
-# split function using shuffle-split using 3/4 for train and 1/4 for test.
+# split function using shuffle-split using 4/5 for train and 1/5 for test.
 def train_test_split(X, y, train_size=0.8, test_size=0.2,
                      random_state=0):
     tts = ShuffleSplit(train_size=train_size, test_size=test_size, random_state=0)
