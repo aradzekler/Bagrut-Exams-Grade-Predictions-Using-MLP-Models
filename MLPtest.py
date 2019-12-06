@@ -22,6 +22,7 @@ BOILERPLATE
 '''
 # eager execution feature is making problems
 tf.compat.v1.disable_eager_execution()
+tf.compat.v1.reset_default_graph()
 
 data_folder_xlsx = Path("schoolDbEng.xlsx")
 data_folder_csv = Path("schoolDBcsv.csv")
@@ -38,12 +39,10 @@ DEFINE SCALER
 # standard scaler doesnt work well here because our data is not distributed
 # minmax scaler doesnt work well because it shrinks some of the data too much so numbers are rounded up to 0 or 1.
 # the robust scaler works pretty well and arranges our data between -10 and 10, is nice!
-Y_s = df['avg_final_grades'].copy()  # Y label: dependent variable avg_final_grades
-X_s = df.drop(columns=['profession', 'city_name', 'school_name'])  # X label: features, dropping named features
-print(X_s)
-X = X_s.to_numpy()  # need to convert the dataframe to a numpy array because of native function.
-scaler = Scalers.RobustScaler().fit(X_s).transform(X_s)
-print(scaler)
+Y = df['avg_final_grades'].copy()  # Y label: dependent variable avg_final_grades
+X = df.drop(columns=['profession', 'city_name', 'school_name'])  # X label: features, dropping named features
+X = X.to_numpy()  # need to convert the dataframe to a numpy array because of native function.
+Scalers.RobustScaler().fit(X).transform(X)
 
 '''
 SPLIT THE DATA INTO TRAIN AND TEST
@@ -106,25 +105,21 @@ with tf.name_scope("MLP"):
 # measuring loss preformace, every call to 'loss' will activate l1 loss function (LAD)
 # we will use LAD when there are outliers and MSE when no outliers are present.
 with tf.name_scope("loss"):
-    lad = tf.reduce_mean(tf.abs(Y - Y_pred), name='lad')
+    loss = tf.reduce_mean(tf.abs(Y - Y_pred), name='loss')
     # mse = tf.reduce_mean(tf.square(Y - Y_pred), name='MSE')
 
 # using the Adam optimizer which is using adaptive learning rate
 # methods to find individual learning rates for each parameter instead of using
 # exponential decay for decaying our learning rate.
+# we will also want to minimize our loss function here.
 with tf.name_scope("train"):
-    training_op = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate).minimize(lad)
+    training_op = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
 # our accuracy every epoch
 with tf.name_scope("eval"):
     correct_prediction = tf.equal(tf.argmax(Y_pred, 1), tf.argmax(Y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
-# summaries for easier printing
-tf.summary.scalar("loss", lad)
-tf.summary.scalar("accuracy", accuracy)
-tf.summary.scalar("learn_rate", learning_rate)
-merged_summary = tf.compat.v1.summary.merge_all()
 
 '''
 EXECUTING THE MODEL
@@ -151,15 +146,27 @@ X_train_list = X_train.tolist()
 X_train_df = pd.DataFrame(X_train_list)
 Y_train_list = Y_train.tolist()
 Y_train_df = pd.DataFrame(X_train_list)
-index = []
+X_index = []
+Y_index = []
 for val in X_train_list:
-    index.append(X_train_list.index(val))
+    X_index.append(X_train_list.index(val))
+
+# summaries for easier printing
+tf.summary.scalar("loss", loss)
+tf.summary.scalar("loss", loss)
+tf.summary.scalar("accuracy", accuracy)
+tf.summary.scalar("learn_rate", learning_rate)
+merged_summary = tf.compat.v1.summary.merge_all()
+print(merged_summary)
+
 print("FINISHED PREPARATIONS, EXECUTING MODEL")
 
 # todo: finish the model, visualize
 with tf.compat.v1.Session() as sess:
     print("ENTERING SESSION")
-    sess.run(tf.compat.v1.global_variables_initializer())
+    init = tf.compat.v1.global_variables_initializer()
+    sess.run(init)
+
     # write logs for tensorboard
     summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
 
@@ -168,22 +175,26 @@ with tf.compat.v1.Session() as sess:
         lower_bound = 0
         print("CREATING BATCHES")
         for i in range(n_batches):
-            batch_index = index[lower_bound:(lower_bound + batch_size)]
+            batch_index = X_index[lower_bound:(lower_bound + batch_size)]
             lower_bound += batch_size
             X_batch = X_train_df.loc[batch_index, :]  # dataframe so we could use loc
-            Y_batch = Y_train[batch_index].values.reshape(-1, 1)  # TODO: A PROBLEM WITH THE Y
+            Y_batch = Y_train_df.loc[batch_index, :]
+            # Y_batch = Y_train[batch_index].values.reshape(-1, 1)
+            Y_batch_shaped = np.asarray(Y_batch).reshape(-1, 1)  # reshape to unknown number of rows and 1 column
 
-            # improve the model _ is storing the value of last expression in interpreter.
+            # TODO: merged_summary for some reason is None and fucks up everything, need to find the reason to that
+
             # so the training of the Adam optimizer is being feeded back to the session.
-            _, summary = sess.run([training_op, merged_summary], feed_dict={X: X_batch, Y: Y_batch})
+            # the optimizer minimizes our loss function
+            _, summary = sess.run([training_op, merged_summary], feed_dict={X: X_batch, Y: Y_batch_shaped})
 
             # Write logs at every iteration
             summary_writer.add_summary(summary, epoch * n_batches + i)
 
         # measure performance and display the results
         if (epoch + 1) % display_epoch == 0:
-            _mse_train = sess.run(lad, feed_dict={X: X_train, Y: Y_train.reshape(-1, 1)})
-            _mse_test = sess.run(lad, feed_dict={X: X_test, Y: Y_test.reshape(-1, 1)})
+            _mse_train = sess.run(loss, feed_dict={X: X_train, Y: Y_train.reshape(-1, 1)})
+            _mse_test = sess.run(loss, feed_dict={X: X_test, Y: Y_test.reshape(-1, 1)})
 
             # append to list for displaying
             mse_train_list.append(_mse_train)
