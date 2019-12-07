@@ -23,6 +23,7 @@ BOILERPLATE
 # eager execution feature is making problems
 tf.compat.v1.disable_eager_execution()
 tf.compat.v1.reset_default_graph()
+gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.3)
 
 data_folder_xlsx = Path("schoolDbEng.xlsx")
 data_folder_csv = Path("schoolDBcsv.csv")
@@ -106,7 +107,6 @@ with tf.name_scope("MLP"):
 # we will use LAD when there are outliers and MSE when no outliers are present.
 with tf.name_scope("loss"):
     loss = tf.reduce_mean(tf.abs(Y - Y_pred), name='loss')
-    tf.summary.scalar("loss", loss)
     # mse = tf.reduce_mean(tf.square(Y - Y_pred), name='MSE')
 
 # using the Adam optimizer which is using adaptive learning rate
@@ -115,13 +115,11 @@ with tf.name_scope("loss"):
 # we will also want to minimize our loss function here.
 with tf.name_scope("train"):
     training_op = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
-    tf.summary.scalar("learn_rate", learning_rate)
 
 # our accuracy every epoch
 with tf.name_scope("eval"):
     correct_prediction = tf.equal(tf.argmax(Y_pred, 1), tf.argmax(Y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-    tf.summary.scalar("accuracy", accuracy)
 
 '''
 EXECUTING THE MODEL
@@ -153,8 +151,7 @@ Y_index = []
 for val in X_train_list:
     X_index.append(X_train_list.index(val))
 
-
-merged_summary = tf.compat.v1.summary.merge_all()
+# merged_summary = tf.compat.v1.summary.merge_all()
 
 print("FINISHED PREPARATIONS, EXECUTING MODEL")
 
@@ -163,7 +160,8 @@ with tf.compat.v1.Session() as sess:
     print("ENTERING SESSION")
 
     # write logs for tensorboard
-    summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
+    # summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
+    summary_writer = tf.summary.create_file_writer(logdir)
 
     tf.compat.v1.global_variables_initializer().run()
     for epoch in range(n_epochs):
@@ -174,17 +172,20 @@ with tf.compat.v1.Session() as sess:
             batch_index = X_index[lower_bound:(lower_bound + batch_size)]
             lower_bound += batch_size
             X_batch = X_train_df.loc[batch_index, :]  # dataframe so we could use loc
-            Y_batch = Y_train_df.loc[batch_index, :]
-            # Y_batch = Y_train[batch_index].values.reshape(-1, 1)
-            Y_batch_shaped = np.asarray(Y_batch).reshape(-1, 1)  # reshape to unknown number of rows and 1 column
+            Y_batch = Y_train[batch_index].values.reshape(-1, 1)  # reshape to unknown number of rows and 1 column
 
-            # TODO: merged_summary for some reason is None and fucks up everything, need to find the reason to that
             # so the training of the Adam optimizer is being feeded back to the session.
-            # the optimizer minimizes our loss function, _ recieves training and summary is added to merged
-            _, summary = sess.run([training_op, merged_summary], feed_dict={X: X_batch, Y: Y_batch_shaped})
+            # the optimizer minimizes our loss function, _ recieves training
+            _ = sess.run(training_op, feed_dict={X: X_batch, Y: Y_batch})
 
             # Write logs at every iteration
-            summary_writer.add_summary(summary, epoch * n_batches + i)
+            with summary_writer.as_default():
+                tf.summary.scalar("loss", loss, step=epoch * n_batches + i)
+                tf.summary.scalar("learn_rate", learning_rate, step=epoch * n_batches + i)
+                tf.summary.scalar("accuracy", accuracy, step=epoch * n_batches + i)
+
+            # Write logs at every iteration
+            #summary_writer.add_summary(summary, epoch * n_batches + i)
 
         # measure performance and display the results
         if (epoch + 1) % display_epoch == 0:
