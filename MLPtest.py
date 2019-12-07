@@ -40,8 +40,8 @@ DEFINE SCALER
 # minmax scaler doesnt work well because it shrinks some of the data too much so numbers are rounded up to 0 or 1.
 # the robust scaler works pretty well and arranges our data between -10 and 10, is nice!
 Y = df['avg_final_grades'].copy()  # Y label: dependent variable avg_final_grades
-X = df.drop(columns=['profession', 'city_name', 'school_name'])  # X label: features, dropping named features
-X = X.to_numpy()  # need to convert the dataframe to a numpy array because of native function.
+X = df.drop(columns=['profession', 'city_name', 'school_name']).to_numpy()  # X label: features, dropping named features
+# need to convert the dataframe to a numpy array because of native function.
 Scalers.RobustScaler().fit(X).transform(X)
 
 '''
@@ -106,6 +106,7 @@ with tf.name_scope("MLP"):
 # we will use LAD when there are outliers and MSE when no outliers are present.
 with tf.name_scope("loss"):
     loss = tf.reduce_mean(tf.abs(Y - Y_pred), name='loss')
+    tf.summary.scalar("loss", loss)
     # mse = tf.reduce_mean(tf.square(Y - Y_pred), name='MSE')
 
 # using the Adam optimizer which is using adaptive learning rate
@@ -114,12 +115,13 @@ with tf.name_scope("loss"):
 # we will also want to minimize our loss function here.
 with tf.name_scope("train"):
     training_op = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+    tf.summary.scalar("learn_rate", learning_rate)
 
 # our accuracy every epoch
 with tf.name_scope("eval"):
     correct_prediction = tf.equal(tf.argmax(Y_pred, 1), tf.argmax(Y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-
+    tf.summary.scalar("accuracy", accuracy)
 
 '''
 EXECUTING THE MODEL
@@ -151,25 +153,19 @@ Y_index = []
 for val in X_train_list:
     X_index.append(X_train_list.index(val))
 
-# summaries for easier printing
-tf.summary.scalar("loss", loss)
-tf.summary.scalar("loss", loss)
-tf.summary.scalar("accuracy", accuracy)
-tf.summary.scalar("learn_rate", learning_rate)
+
 merged_summary = tf.compat.v1.summary.merge_all()
-print(merged_summary)
 
 print("FINISHED PREPARATIONS, EXECUTING MODEL")
 
 # todo: finish the model, visualize
 with tf.compat.v1.Session() as sess:
     print("ENTERING SESSION")
-    init = tf.compat.v1.global_variables_initializer()
-    sess.run(init)
 
     # write logs for tensorboard
     summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
 
+    tf.compat.v1.global_variables_initializer().run()
     for epoch in range(n_epochs):
         # index = list(X_train.index.values)
         lower_bound = 0
@@ -183,9 +179,8 @@ with tf.compat.v1.Session() as sess:
             Y_batch_shaped = np.asarray(Y_batch).reshape(-1, 1)  # reshape to unknown number of rows and 1 column
 
             # TODO: merged_summary for some reason is None and fucks up everything, need to find the reason to that
-
             # so the training of the Adam optimizer is being feeded back to the session.
-            # the optimizer minimizes our loss function
+            # the optimizer minimizes our loss function, _ recieves training and summary is added to merged
             _, summary = sess.run([training_op, merged_summary], feed_dict={X: X_batch, Y: Y_batch_shaped})
 
             # Write logs at every iteration
