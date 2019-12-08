@@ -23,7 +23,6 @@ BOILERPLATE
 # eager execution feature is making problems
 tf.compat.v1.disable_eager_execution()
 tf.compat.v1.reset_default_graph()
-gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.3)
 
 data_folder_xlsx = Path("schoolDbEng.xlsx")
 data_folder_csv = Path("schoolDBcsv.csv")
@@ -55,7 +54,7 @@ print(X_train.shape, X_test.shape, Y_train.shape, Y_test.shape)
 '''
 NEURAL NETWORK PARAMETERS
 '''
-n_hidden_layers = 20  # neurons inside hidden layer
+n_hidden_layers = 10  # neurons inside hidden layer
 n_train = X_train.shape[0]
 n_test = X_test.shape[0]
 n_layer_0 = X_train.shape[1]  # 7 numeric columns as input layer
@@ -88,14 +87,14 @@ DEFINING THE MODEL
 def multilayer_perceptron_model(X, W, b):
     with tf.name_scope('hidden_layer_1'):
         layer_1 = tf.add(tf.matmul(X, W['W1']), b['b1'])
-        # layer_1 = tf.nn.relu(layer_1)
+        layer_1 = tf.nn.relu(layer_1)
     with tf.name_scope('hidden_layer_2'):
         layer_2 = tf.add(tf.matmul(layer_1, W['W2']), b['b2'])
-        # layer_2 = tf.nn.relu(layer_2)
+        layer_2 = tf.nn.relu(layer_2)
     with tf.name_scope('layer_output'):
         layer_3 = tf.add(tf.matmul(layer_2, W['W3']), b['b3'])
         # softmax for classification, sigmoid for true values, linear for regression (when values are unbounded)
-        # layer_3 = tf.nn.sigmoid(layer_3)
+        layer_3 = tf.nn.sigmoid(layer_3)
         return layer_3
 
 
@@ -127,7 +126,7 @@ EXECUTING THE MODEL
 # define some parameters
 n_epochs = 50
 display_epoch = 5  # between how many epochs we want to display results.
-batch_size = 10
+batch_size = 1024
 n_batches = int(len(X_train) / batch_size)
 
 # set up the directory to store the results for tensorboard
@@ -141,15 +140,6 @@ mse_test_list = []
 learning_list = []
 prediction_results = []
 
-# other parameters
-X_train_list = X_train.tolist()
-X_train_df = pd.DataFrame(X_train_list)
-Y_train_list = Y_train.tolist()
-Y_train_df = pd.DataFrame(X_train_list)
-X_index = []
-Y_index = []
-for val in X_train_list:
-    X_index.append(X_train_list.index(val))
 
 # merged_summary = tf.compat.v1.summary.merge_all()
 
@@ -157,60 +147,56 @@ print("FINISHED PREPARATIONS, EXECUTING MODEL")
 
 # todo: finish the model, visualize
 with tf.compat.v1.Session() as sess:
-    print("ENTERING SESSION")
+    with tf.device("/cpu:0"):
+        print("ENTERING SESSION")
 
-    # write logs for tensorboard
-    # summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
-    summary_writer = tf.summary.create_file_writer(logdir)
+        # write logs for tensorboard
+        # summary_writer = tf.compat.v1.summary.FileWriter(logdir, graph=tf.compat.v1.get_default_graph())
+        summary_writer = tf.summary.create_file_writer(logdir)
 
-    tf.compat.v1.global_variables_initializer().run()
-    for epoch in range(n_epochs):
-        # index = list(X_train.index.values)
-        lower_bound = 0
-        print("CREATING BATCHES")
-        for i in range(n_batches):
-            batch_index = X_index[lower_bound:(lower_bound + batch_size)]
-            lower_bound += batch_size
-            X_batch = X_train_df.loc[batch_index, :]  # dataframe so we could use loc
-            Y_batch = Y_train[batch_index].values.reshape(-1, 1)  # reshape to unknown number of rows and 1 column
+        tf.compat.v1.global_variables_initializer().run()
+        for epoch in range(n_epochs):
+            idx = np.random.permutation(n_batches)
+            X_random = X_train[idx]
+            Y_random = Y_train[idx].values.reshape(-1, 1)
+            for i in range(n_batches):
+                X_batch = X_random[i * batch_size:(i + 1) * batch_size]
+                Y_batch = Y_random[i * batch_size:(i + 1) * batch_size]
 
-            # so the training of the Adam optimizer is being feeded back to the session.
-            # the optimizer minimizes our loss function, _ recieves training
-            _ = sess.run(training_op, feed_dict={X: X_batch, Y: Y_batch})
+                sess.run(training_op, feed_dict={X: X_batch, Y: Y_batch})
+                # Write logs at every iteration
+                with summary_writer.as_default():
+                    tf.summary.scalar("loss", loss, step=epoch * n_batches + i)
+                    tf.summary.scalar("learn_rate", learning_rate, step=epoch * n_batches + i)
+                    tf.summary.scalar("accuracy", accuracy, step=epoch * n_batches + i)
+                # Write logs at every iteration
+                # summary_writer.add_summary(summary, epoch * n_batches + i)
+            # measure performance and display the results
+            if (epoch + 1) % display_epoch == 0:
+                _mse_train = sess.run(loss, feed_dict={X: X_train, Y: Y_train.values.reshape(-1, 1)})
+                _mse_test = sess.run(loss, feed_dict={X: X_test, Y: Y_test.values.reshape(-1, 1)})
+                # append to list for displaying
+                mse_train_list.append(_mse_train)
+                mse_test_list.append(_mse_test)
+                learning_list.append(0.5)  # TODO: LEARNING RATE PRINTING
 
-            # Write logs at every iteration
-            with summary_writer.as_default():
-                tf.summary.scalar("loss", loss, step=epoch * n_batches + i)
-                tf.summary.scalar("learn_rate", learning_rate, step=epoch * n_batches + i)
-                tf.summary.scalar("accuracy", accuracy, step=epoch * n_batches + i)
+                # Save model weights to disk for reproducibility
+                # saver = tf.compat.v1.train.Saver(max_to_keep=15)
+                # saver.save(sess, "tf_checkpoints/epoch{:04}.ckpt".format((epoch + 1)))
 
-            # Write logs at every iteration
-            #summary_writer.add_summary(summary, epoch * n_batches + i)
+                print("Epoch: {:04}\tTrainMSE: {:06.5f}\tTestMSE: {:06.5f}, Learning: {:06.7f}".format((epoch + 1),
+                                                                                                       _mse_train,
+                                                                                                       _mse_test,
+                                                                                                       learning_list[
+                                                                                                           -1]))
+                prediction_results = sess.run(Y_pred, feed_dict={X: X_test})
 
-        # measure performance and display the results
-        if (epoch + 1) % display_epoch == 0:
-            _mse_train = sess.run(loss, feed_dict={X: X_train, Y: Y_train.reshape(-1, 1)})
-            _mse_test = sess.run(loss, feed_dict={X: X_test, Y: Y_test.reshape(-1, 1)})
-
-            # append to list for displaying
-            mse_train_list.append(_mse_train)
-            mse_test_list.append(_mse_test)
-            learning_list.append(sess.run(learning_rate))
-
-            # Save model weights to disk for reproducibility
-            saver = tf.compat.v1.train.Saver(max_to_keep=15)
-            saver.save(sess, "tf_checkpoints/epoch{:04}.ckpt".format((epoch + 1)))
-
-            print("Epoch: {:04}\tTrainMSE: {:06.5f}\tTestMSE: {:06.5f}, Learning: {:06.7f}".format((epoch + 1),
-                                                                                                   _mse_train,
-                                                                                                   _mse_test,
-                                                                                                   learning_list[-1]))
-            prediction_results = sess.run(Y_pred, feed_dict={X: X_test})
 
 '''
 GRAPHING THE MODEL
 '''
 # set up legend
+print("GRAPHING")
 blue_patch = patches.Patch(color='blue', label='Train MSE')
 red_patch = patches.Patch(color='red', label='Test MSE')
 plt.legend(handles=[blue_patch, red_patch])
