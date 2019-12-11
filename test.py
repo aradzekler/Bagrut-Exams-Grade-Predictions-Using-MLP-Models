@@ -81,8 +81,8 @@ categorical_vars = ['city_id', 'school_id', 'units', 'profession', 'grad_year']
 continuous_vars = ['avg_final_grades', 'num_of_testers', ]
 
 df = pd.DataFrame(school_data_set)  # dataframe for easier handling of the data.
-refactor_data_frame(df)
-print(df)
+#refactor_data_frame(df)
+#print(df)
 
 # making the dataframe easier.
 def linear_reg(data_frame):
@@ -111,6 +111,7 @@ def linear_reg(data_frame):
     unique_schools = data_frame['school_name'].unique()
 
     features = 3 + unique_prof.size + unique_cities.size + unique_schools.size
+    records = data_frame.size
 
     unique_prof_dict = dict(
         (val, index + 3) for index, val in enumerate(unique_prof))
@@ -120,12 +121,12 @@ def linear_reg(data_frame):
         (val, index + 3 + unique_prof.size + unique_cities.size) for index, val in enumerate(unique_schools))
 
     data_x = np.ndarray(
-        shape=(data_frame.size, features),
+        shape=(records, features),
         dtype=float,
         order='F')
 
     data_y = np.ndarray(
-        shape=data_frame.size,
+        shape=(records, 1),
         dtype=float,
         order='F')
 
@@ -154,9 +155,9 @@ def linear_reg(data_frame):
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    for i in range(0, 1000):
+    for i in range(0, 100):
         sess.run(update, feed_dict={x: data_x, y_: data_y})
-        if i % 100 == 0:
+        if i % 10 == 0:
             print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
                   loss.eval(session=sess, feed_dict={x: data_x, y_: data_y}))
     #x_axis = np.arange(0, 8, 0.1)
@@ -169,3 +170,4 @@ def linear_reg(data_frame):
     #plt.plot(x_axis, y_vals)
     #plt.show()
 
+linear_reg(df)
