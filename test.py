@@ -120,12 +120,12 @@ def linear_reg(data_frame):
     unique_schools_dict = dict(
         (val, index + 3 + unique_prof.size + unique_cities.size) for index, val in enumerate(unique_schools))
 
-    data_x = np.ndarray(
+    data_x = np.zeros(
         shape=(records, features),
         dtype=float,
         order='F')
 
-    data_y = np.ndarray(
+    data_y = np.zeros(
         shape=(records, 1),
         dtype=float,
         order='F')
