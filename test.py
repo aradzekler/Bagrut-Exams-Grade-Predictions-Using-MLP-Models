@@ -44,14 +44,14 @@ def refactor_data_frame(data_frame):
 
     # changing column names for easier work.
     data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
-                       'Number of Testees': 'num_of_testers',
-                       'Yehidut Limud': 'units',
-                       'Graduation': 'grad_year',
-                       'Profession': 'profession',
-                       'City Name': 'city_name',
-                       'School Name': 'school_name',
-                       'School ID': 'school_id'},
-                     inplace=True)
+                               'Number of Testees': 'num_of_testers',
+                               'Yehidut Limud': 'units',
+                               'Graduation': 'grad_year',
+                               'Profession': 'profession',
+                               'City Name': 'city_name',
+                               'School Name': 'school_name',
+                               'School ID': 'school_id'},
+                      inplace=True)
 
 
 # setting up train and test sets (4/5 to train and 1/5 to test)
@@ -81,8 +81,10 @@ categorical_vars = ['city_id', 'school_id', 'units', 'profession', 'grad_year']
 continuous_vars = ['avg_final_grades', 'num_of_testers', ]
 
 df = pd.DataFrame(school_data_set)  # dataframe for easier handling of the data.
-#refactor_data_frame(df)
-#print(df)
+
+
+# refactor_data_frame(df)
+# print(df)
 
 # making the dataframe easier.
 def linear_reg(data_frame):
@@ -131,18 +133,18 @@ def linear_reg(data_frame):
         order='F')
 
     for index, row in df.iterrows():
-        data_y[index] = row['avg_final_grades']
+        data_y[index] = row['avg_final_grades'] / 100
 
         data_x[index][0] = row['num_of_testers']
-        data_x[index][1] = row['units']
-        data_x[index][2] = row['grad_year']
+        data_x[index][1] = row['units'] - 2
+        data_x[index][2] = row['grad_year'] - 2012
 
         data_x[index][unique_prof_dict[row['profession']]] = 1
         data_x[index][unique_cities_dict[row['city_name']]] = 1
         data_x[index][unique_schools_dict[row['school_name']]] = 1
         print(index)
 
-    #np.random.shuffle(data_x)
+    # np.random.shuffle(data_x)
 
     x = tf.placeholder(tf.float32, [None, features])
     y_ = tf.placeholder(tf.float32, [None, 1])
@@ -150,24 +152,25 @@ def linear_reg(data_frame):
     b = tf.Variable(tf.zeros([1]))
     y = tf.matmul(x, w) + b
 
-    loss = tf.reduce_mean(tf.pow(y - y_, 2)) + 0.1 * tf.nn.l2_loss(w)
-    update = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+    loss = tf.reduce_mean(tf.pow(y - y_, 2))
+    update = tf.train.GradientDescentOptimizer(0.0001).minimize(loss)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     for i in range(0, 100):
         sess.run(update, feed_dict={x: data_x, y_: data_y})
-        if i % 10 == 0:
-            print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
-                  loss.eval(session=sess, feed_dict={x: data_x, y_: data_y}))
-    #x_axis = np.arange(0, 8, 0.1)
-    #x_data = []
-    #for i in x_axis:
+        # if i % 10 == 0:
+        print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
+              loss.eval(session=sess, feed_dict={x: data_x, y_: data_y}))
+    # x_axis = np.arange(0, 8, 0.1)
+    # x_data = []
+    # for i in x_axis:
     #    x_data.append(vecto(i))
-    #x_data = np.array(x_data)
-    #y_vals = np.matmul(x_data, sess.run(w)) + sess.run(b)
-    #import matplotlib.pyplot as plt
-    #plt.plot(x_axis, y_vals)
-    #plt.show()
+    # x_data = np.array(x_data)
+    # y_vals = np.matmul(x_data, sess.run(w)) + sess.run(b)
+    # import matplotlib.pyplot as plt
+    # plt.plot(x_axis, y_vals)
+    # plt.show()
+
 
 linear_reg(df)
