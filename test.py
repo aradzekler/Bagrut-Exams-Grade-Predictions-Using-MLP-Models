@@ -88,13 +88,15 @@ df = pd.DataFrame(school_data_set)  # dataframe for easier handling of the data.
 
 # making the dataframe easier.
 def linear_reg(data_frame):
-    columns_pos = {'avg_final_grades': 0,
-                   'num_of_testers': 1,
-                   'units': 2,
-                   'grad_year': 3,
-                   'profession': 4,
-                   'City city_name': 5,
-                   'school_name': 6}
+    # columns positions
+    index_testers = 0
+    index_units = 1
+    index_year = 2
+
+    # data normalization
+    norm_testers = 0
+    norm_units = 2
+    norm_year = 2012
 
     # changing column names for easier work.
     data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
@@ -117,6 +119,7 @@ def linear_reg(data_frame):
     features = regular_features + unique_prof.size + unique_cities.size + unique_schools.size
     records = data_frame.size
     batch_size = 1000
+    iteration_print_each =100
 
     # unique maps to assign unique id per feature to specific value
     unique_prof_dict = dict(
@@ -153,9 +156,9 @@ def linear_reg(data_frame):
         data_raw = data_x[random_index]
 
         # 3 normal features units/year/num of testers
-        data_raw[0] = row['num_of_testers']
-        data_raw[1] = row['units'] - 2
-        data_raw[2] = row['grad_year'] - 2012
+        data_raw[index_testers] = row['num_of_testers'] - norm_testers
+        data_raw[index_units] = row['units'] - norm_units
+        data_raw[index_year] = row['grad_year'] - norm_year
 
         # take each raw features understand what his is "id"
         # and then assign value at his id position to 1
@@ -196,8 +199,8 @@ def linear_reg(data_frame):
         # updating the session
         sess.run(update, feed_dict={x_: sub_x, y_: sub_y})
 
-        # print progress each 100 iteration
-        if i % 100 == 0:
+        # print progress each iteration_print_each iteration's
+        if i % iteration_print_each == 0:
             print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
                   loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y}))
 
