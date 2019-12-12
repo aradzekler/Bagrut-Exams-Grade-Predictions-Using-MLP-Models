@@ -102,7 +102,7 @@ def linear_reg(data_frame):
     records = data_frame.size
     batch_size = 1000
     train_iteration_print_each = 100
-    train_iteration_count = 1000  # 10000
+    train_iteration_count = 10000  # 10000
     train_percentage = 0.85
     train_records = int(records * train_percentage)
 
@@ -213,7 +213,7 @@ def linear_reg(data_frame):
         # print progress each iteration_print_each iteration's
         if i % train_iteration_print_each == 0:
             error = loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y})
-            error = np.sqrt(error / train_records)
+            error = np.sqrt(error / (data_end - data_start))
             print('Iteration:', i, ' loss:', error)
 
     # resolve the sub array relevant for the test
