@@ -102,7 +102,7 @@ def linear_reg(data_frame):
     records = data_frame.size
     batch_size = 1000
     train_iteration_print_each = 100
-    train_iteration_count = 10000  # 10000
+    train_iteration_count = 2500  # 10000
     train_percentage = 0.85
     train_records = int(records * train_percentage)
 
@@ -186,7 +186,7 @@ def linear_reg(data_frame):
 
     # loss function and GradientDescentOptimizer
     loss = tf.reduce_mean(tf.pow(y - y_, 2))
-    update = tf.train.GradientDescentOptimizer(0.0001).minimize(loss)
+    update = tf.train.GradientDescentOptimizer(0.001).minimize(loss)
 
     # init session
     sess = tf.Session()
