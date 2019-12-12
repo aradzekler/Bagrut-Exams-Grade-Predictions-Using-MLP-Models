@@ -107,76 +107,96 @@ def linear_reg(data_frame):
                                'School ID': 'school_id'},
                       inplace=True)
 
-    # adding numeric columns to dataframe instead of nasty hebrew ones.
+    # adding numeric columns to data frame instead of nasty hebrew ones.
     unique_prof = data_frame['profession'].unique()
     unique_cities = data_frame['city_name'].unique()
     unique_schools = data_frame['school_name'].unique()
 
-    features = 3 + unique_prof.size + unique_cities.size + unique_schools.size
+    # numbers of features records and batch size
+    regular_features = 3
+    features = regular_features + unique_prof.size + unique_cities.size + unique_schools.size
     records = data_frame.size
-    steps = 1000
+    batch_size = 1000
 
+    # unique maps to assign unique id per feature to specific value
     unique_prof_dict = dict(
-        (val, index + 3) for index, val in enumerate(unique_prof))
+        (val, index + regular_features) for index, val in enumerate(unique_prof))
     unique_cities_dict = dict(
-        (val, index + 3 + unique_prof.size) for index, val in enumerate(unique_cities))
+        (val, index + regular_features + unique_prof.size) for index, val in enumerate(unique_cities))
     unique_schools_dict = dict(
-        (val, index + 3 + unique_prof.size + unique_cities.size) for index, val in enumerate(unique_schools))
+        (val, index + regular_features + unique_prof.size + unique_cities.size) for index, val in enumerate(unique_schools))
 
+    # the data_x array with shape =(records, features)
+    # contain the regular_features feature for each city/school/profession
     data_x = np.zeros(
         shape=(records, features),
         dtype=float,
         order='F')
 
+    # data_y contain the grades
     data_y = np.zeros(
         shape=(records, 1),
         dtype=float,
         order='F')
 
+    # create a random stack and shuffle it
+    # in order to create a mapping for shuffling the data
     stack = list(range(records))
     random.shuffle(stack)
 
     for index, row in df.iterrows():
+        # the random new index used to shuffle the data
         random_index = stack[index]
 
+        # the data_y is the final grade
         data_y[random_index] = row['avg_final_grades']
         data_raw = data_x[random_index]
 
+        # 3 normal features units/year/num of testers
         data_raw[0] = row['num_of_testers']
         data_raw[1] = row['units'] - 2
         data_raw[2] = row['grad_year'] - 2012
 
+        # take each raw features understand what his is "id"
+        # and then assign value at his id position to 1
         data_raw[unique_prof_dict[row['profession']]] = 1
         data_raw[unique_cities_dict[row['city_name']]] = 1
         data_raw[unique_schools_dict[row['school_name']]] = 1
-        print(index)
 
-    # np.random.shuffle(data_x)
-
+    # tensor flow linear regression model
     x_ = tf.placeholder(tf.float32, [None, features])
     y_ = tf.placeholder(tf.float32, [None, 1])
     w = tf.Variable(tf.zeros([features, 1]))
     b = tf.Variable(tf.zeros([1]))
     y = tf.matmul(x_, w) + b
 
+    # loss function and GradientDescentOptimizer
     loss = tf.reduce_mean(tf.pow(y - y_, 2))
     update = tf.train.GradientDescentOptimizer(0.0001).minimize(loss)
 
+    # init session
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
     for i in range(0, 10000):
-        data_start = steps * i % records
-        data_end = (steps + 1) * i % records
+        # resolve a start and end position according to the barch size
+        data_start = batch_size * i % records
+        data_end = (batch_size + 1) * i % records
 
+        # in case when the end position is bigger then the start
+        # because the batch_size is probably not a perfect divider to records amount
+        # and if it is bigger decreasing it so it will be in the range
         if data_end < data_start:
             data_end = records
 
+        # resolve the sub array according to batch start&end position
         sub_x = data_x[data_start:data_end, :]
         sub_y = data_y[data_start:data_end, :]
 
+        # updating the session
         sess.run(update, feed_dict={x_: sub_x, y_: sub_y})
 
+        # print progress each 100 iteration
         if i % 100 == 0:
             print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
                   loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y}))
