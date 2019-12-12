@@ -132,16 +132,22 @@ def linear_reg(data_frame):
         dtype=float,
         order='F')
 
+    stack = list(range(records))
+    random.shuffle(stack)
+
     for index, row in df.iterrows():
-        data_y[index] = row['avg_final_grades'] / 100
+        random_index = stack[index]
 
-        data_x[index][0] = row['num_of_testers']
-        data_x[index][1] = row['units'] - 2
-        data_x[index][2] = row['grad_year'] - 2012
+        data_y[random_index] = row['avg_final_grades']
+        data_raw = data_x[random_index]
 
-        data_x[index][unique_prof_dict[row['profession']]] = 1
-        data_x[index][unique_cities_dict[row['city_name']]] = 1
-        data_x[index][unique_schools_dict[row['school_name']]] = 1
+        data_raw[0] = row['num_of_testers']
+        data_raw[1] = row['units'] - 2
+        data_raw[2] = row['grad_year'] - 2012
+
+        data_raw[unique_prof_dict[row['profession']]] = 1
+        data_raw[unique_cities_dict[row['city_name']]] = 1
+        data_raw[unique_schools_dict[row['school_name']]] = 1
         print(index)
 
     # np.random.shuffle(data_x)
@@ -157,11 +163,13 @@ def linear_reg(data_frame):
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    for i in range(0, 100):
+    for i in range(0, 1000):
         sess.run(update, feed_dict={x: data_x, y_: data_y})
         # if i % 10 == 0:
         print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
               loss.eval(session=sess, feed_dict={x: data_x, y_: data_y}))
+
+
     # x_axis = np.arange(0, 8, 0.1)
     # x_data = []
     # for i in x_axis:
