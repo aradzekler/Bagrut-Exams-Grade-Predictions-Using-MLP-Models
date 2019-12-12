@@ -86,7 +86,7 @@ df = pd.DataFrame(school_data_set)  # dataframe for easier handling of the data.
 # refactor_data_frame(df)
 # print(df)
 
-# making the dataframe easier.
+# making the data frame easier.
 def linear_reg(data_frame):
     # columns positions
     index_testers = 0
@@ -97,6 +97,12 @@ def linear_reg(data_frame):
     norm_testers = 0
     norm_units = 2
     norm_year = 2012
+
+    # linear regression config
+    batch_size = 1000
+    iteration_print_each = 100
+    iteration_count = 1000  # 10000
+    test_data_percentage = 0.15
 
     # changing column names for easier work.
     data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
@@ -109,6 +115,11 @@ def linear_reg(data_frame):
                                'School ID': 'school_id'},
                       inplace=True)
 
+    # trim spaces
+    data_frame['profession'] = data_frame['profession'].str.rstrip()
+    data_frame['city_name'] = data_frame['city_name'].str.rstrip()
+    data_frame['school_name'] = data_frame['school_name'].str.rstrip()
+
     # adding numeric columns to data frame instead of nasty hebrew ones.
     unique_prof = data_frame['profession'].unique()
     unique_cities = data_frame['city_name'].unique()
@@ -118,8 +129,9 @@ def linear_reg(data_frame):
     regular_features = 3
     features = regular_features + unique_prof.size + unique_cities.size + unique_schools.size
     records = data_frame.size
-    batch_size = 1000
-    iteration_print_each =100
+
+    for prof in unique_prof:
+        print(prof + "\n")
 
     # unique maps to assign unique id per feature to specific value
     unique_prof_dict = dict(
@@ -127,7 +139,8 @@ def linear_reg(data_frame):
     unique_cities_dict = dict(
         (val, index + regular_features + unique_prof.size) for index, val in enumerate(unique_cities))
     unique_schools_dict = dict(
-        (val, index + regular_features + unique_prof.size + unique_cities.size) for index, val in enumerate(unique_schools))
+        (val, index + regular_features + unique_prof.size + unique_cities.size) for index, val in
+        enumerate(unique_schools))
 
     # the data_x array with shape =(records, features)
     # contain the regular_features feature for each city/school/profession
@@ -181,7 +194,7 @@ def linear_reg(data_frame):
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
-    for i in range(0, 10000):
+    for i in range(0, iteration_count):
         # resolve a start and end position according to the barch size
         data_start = batch_size * i % records
         data_end = (batch_size + 1) * i % records
@@ -204,15 +217,35 @@ def linear_reg(data_frame):
             print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
                   loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y}))
 
-    # x_axis = np.arange(0, 8, 0.1)
-    # x_data = []
-    # for i in x_axis:
-    #    x_data.append(vecto(i))
-    # x_data = np.array(x_data)
-    # y_vals = np.matmul(x_data, sess.run(w)) + sess.run(b)
-    # import matplotlib.pyplot as plt
-    # plt.plot(x_axis, y_vals)
-    # plt.show()
+    while True:
+        test_testers = int(input("Enter number of testers: "))
+        test_units = int(input("Enter units: "))
+        test_year = int(input("Enter year: "))
+
+        test_profession = input("Enter profession: ")
+        test_city = input("Enter city: ")
+        test_school = input("Enter school: ")
+
+        # test data
+        data_test_x = np.zeros(
+            shape=(1, features),
+            dtype=float,
+            order='F')
+        data_test_x_raw = data_test_x[0]
+
+        # 3 normal features units/year/num of testers
+        data_test_x_raw[index_testers] = test_testers - norm_testers
+        data_test_x_raw[index_units] = test_units - norm_units
+        data_test_x_raw[index_year] = test_year - norm_year
+
+        # take each raw features understand what his is "id"
+        # and then assign value at his id position to 1
+        data_test_x_raw[unique_prof_dict[test_profession]] = 1
+        data_test_x_raw[unique_cities_dict[test_city]] = 1
+        data_test_x_raw[unique_schools_dict[test_school]] = 1
+
+        data_test_y = np.matmul(data_test_x, sess.run(w)) + sess.run(b)
+        print('Estimated Grade {0} \n \n'.format(data_test_y))
 
 
 linear_reg(df)
