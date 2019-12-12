@@ -114,6 +114,7 @@ def linear_reg(data_frame):
 
     features = 3 + unique_prof.size + unique_cities.size + unique_schools.size
     records = data_frame.size
+    steps = 1000
 
     unique_prof_dict = dict(
         (val, index + 3) for index, val in enumerate(unique_prof))
@@ -152,23 +153,33 @@ def linear_reg(data_frame):
 
     # np.random.shuffle(data_x)
 
-    x = tf.placeholder(tf.float32, [None, features])
+    x_ = tf.placeholder(tf.float32, [None, features])
     y_ = tf.placeholder(tf.float32, [None, 1])
     w = tf.Variable(tf.zeros([features, 1]))
     b = tf.Variable(tf.zeros([1]))
-    y = tf.matmul(x, w) + b
+    y = tf.matmul(x_, w) + b
 
     loss = tf.reduce_mean(tf.pow(y - y_, 2))
     update = tf.train.GradientDescentOptimizer(0.0001).minimize(loss)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    for i in range(0, 1000):
-        sess.run(update, feed_dict={x: data_x, y_: data_y})
-        # if i % 10 == 0:
-        print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
-              loss.eval(session=sess, feed_dict={x: data_x, y_: data_y}))
 
+    for i in range(0, 10000):
+        data_start = steps * i % records
+        data_end = (steps + 1) * i % records
+
+        if data_end < data_start:
+            data_end = records
+
+        sub_x = data_x[data_start:data_end, :]
+        sub_y = data_y[data_start:data_end, :]
+
+        sess.run(update, feed_dict={x_: sub_x, y_: sub_y})
+
+        if i % 100 == 0:
+            print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
+                  loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y}))
 
     # x_axis = np.arange(0, 8, 0.1)
     # x_data = []
