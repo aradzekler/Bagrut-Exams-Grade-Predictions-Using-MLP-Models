@@ -65,14 +65,13 @@ def train_and_test_div(data):
 
 data_folder_xlsx = Path("schoolDbEng.xlsx")
 data_folder_csv = Path("schoolDBcsv.csv")
-# xlsx_to_csv(data_folder_xlsx, data_folder_csv)
 
 school_data_set = pd.read_csv(data_folder_csv, encoding='utf-8')
 school_data_set.info()
 
 '''
 plt.figure() # plotting
-sns.distplot(school_dataset['Final Grade Average'],bins=20,axlabel='Grades',kde=1,norm_hist=0)
+sns.distplot(school_data_set['Final Grade Average'],bins=20,axlabel='Grades',kde=1,norm_hist=0)
 plt.show()
 '''
 
@@ -99,10 +98,13 @@ def linear_reg(data_frame):
     norm_year = 2012
 
     # linear regression config
+    random_seed = 4
+    records = data_frame.size
     batch_size = 1000
-    iteration_print_each = 100
-    iteration_count = 1000  # 10000
-    test_data_percentage = 0.15
+    train_iteration_print_each = 100
+    train_iteration_count = 1000  # 10000
+    train_percentage = 0.85
+    train_records = int(records * train_percentage)
 
     # changing column names for easier work.
     data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
@@ -128,10 +130,6 @@ def linear_reg(data_frame):
     # numbers of features records and batch size
     regular_features = 3
     features = regular_features + unique_prof.size + unique_cities.size + unique_schools.size
-    records = data_frame.size
-
-    for prof in unique_prof:
-        print(prof + "\n")
 
     # unique maps to assign unique id per feature to specific value
     unique_prof_dict = dict(
@@ -158,7 +156,7 @@ def linear_reg(data_frame):
     # create a random stack and shuffle it
     # in order to create a mapping for shuffling the data
     stack = list(range(records))
-    random.shuffle(stack)
+    random.Random(random_seed).shuffle(stack)
 
     for index, row in df.iterrows():
         # the random new index used to shuffle the data
@@ -194,16 +192,16 @@ def linear_reg(data_frame):
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
-    for i in range(0, iteration_count):
-        # resolve a start and end position according to the barch size
-        data_start = batch_size * i % records
-        data_end = (batch_size + 1) * i % records
+    for i in range(0, train_iteration_count):
+        # resolve a start and end position according to the batch size
+        data_start = batch_size * i % train_records
+        data_end = (batch_size + 1) * i % train_records
 
         # in case when the end position is bigger then the start
         # because the batch_size is probably not a perfect divider to records amount
         # and if it is bigger decreasing it so it will be in the range
         if data_end < data_start:
-            data_end = records
+            data_end = train_records
 
         # resolve the sub array according to batch start&end position
         sub_x = data_x[data_start:data_end, :]
@@ -213,10 +211,21 @@ def linear_reg(data_frame):
         sess.run(update, feed_dict={x_: sub_x, y_: sub_y})
 
         # print progress each iteration_print_each iteration's
-        if i % iteration_print_each == 0:
-            print('Iteration:', i, ' W:', sess.run(w), ' b:', sess.run(b), ' loss:',
-                  loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y}))
+        if i % train_iteration_print_each == 0:
+            error = loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y})
+            error = np.sqrt(error / train_records)
+            print('Iteration:', i, ' loss:', error)
 
+    # resolve the sub array relevant for the test
+    sub_x_test = data_x[train_records:records, :]
+    sub_y_test = data_y[train_records:records, :]
+
+    # test the test data
+    test_error = loss.eval(session=sess, feed_dict={x_: sub_x_test, y_: sub_y_test})
+    test_error = np.sqrt(test_error / (records - train_records))
+    print('Test error {0} \n \n'.format(test_error))
+
+    # input from the user to manual test
     while True:
         test_testers = int(input("Enter number of testers: "))
         test_units = int(input("Enter units: "))
