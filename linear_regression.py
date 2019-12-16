@@ -1,10 +1,11 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
 import seaborn as sns  # data visualization
 from pathlib import Path
+
 
 school_data_set = pd.read_csv(Path("schoolDBcsv.csv"), encoding='utf-8')
 
@@ -27,13 +28,12 @@ norm_units = 2
 norm_year = 2012
 
 # linear regression config
-random_seed = 5
+random_seed = 4
 records = data_frame.shape[0]
-batch_size = 1000
+batch_size = 10000
 train_iteration_print_each = 100
 train_iteration_count = 2500  # 10000
-train_percentage = 0.85
-train_records = int(records * train_percentage)
+train_percentage = 0.70
 
 # changing column names for easier work.
 data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
@@ -115,11 +115,22 @@ y = tf.matmul(x_, w) + b
 
 # loss function and GradientDescentOptimizer
 loss = tf.reduce_mean(tf.pow(y - y_, 2))
-update = tf.train.GradientDescentOptimizer(0.001).minimize(loss)
+update = tf.train.GradientDescentOptimizer(0.0001).minimize(loss)
 
 # init session
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
+
+# the train data
+train_records = int(records * train_percentage)
+data_train_x = data_x[0:train_records, :]
+data_train_y = data_y[0:train_records, :]
+
+# resolve the sub array relevant for the test
+test_records = records - train_records
+date_test_x = data_x[train_records:records, :]
+data_test_y = data_y[train_records:records, :]
+
 
 for i in range(0, train_iteration_count):
     # resolve a start and end position according to the batch size
@@ -133,26 +144,21 @@ for i in range(0, train_iteration_count):
         data_end = train_records
 
     # resolve the sub array according to batch start&end position
-    sub_x = data_x[data_start:data_end, :]
-    sub_y = data_y[data_start:data_end, :]
+    sub_x = data_train_x[data_start:data_end, :]
+    sub_y = data_train_y[data_start:data_end, :]
 
     # updating the session
     sess.run(update, feed_dict={x_: sub_x, y_: sub_y})
 
     # print progress each iteration_print_each iteration's
     if i % train_iteration_print_each == 0:
-        error = loss.eval(session=sess, feed_dict={x_: sub_x, y_: sub_y})
-        error = np.sqrt(error / (data_end - data_start))
-        print('Iteration:', i, ' loss:', error)
+        test_loss = loss.eval(session=sess, feed_dict={x_: date_test_x, y_: data_test_y})
+        #test_error = np.sqrt(test_loss / test_records)
+        print('Iteration:', i, ' loss:', test_loss)
 
-# resolve the sub array relevant for the test
-sub_x_test = data_x[train_records:records, :]
-sub_y_test = data_y[train_records:records, :]
-
-# test the test data
-test_error = loss.eval(session=sess, feed_dict={x_: sub_x_test, y_: sub_y_test})
-test_error = np.sqrt(test_error / (records - train_records))
-print('Test error {0} \n \n'.format(test_error))
+        train_loss = loss.eval(session=sess, feed_dict={x_: data_train_x, y_: data_train_y})
+        #train_error = np.sqrt(train_loss / train_records)
+        print('Iteration:', i, ' loss:', train_loss)
 
 # input from the user to manual test
 while True:
@@ -165,22 +171,22 @@ while True:
     test_school = input("Enter school: ")
 
     # test data
-    data_test_x = np.zeros(
+    data_input_x = np.zeros(
         shape=(1, features),
         dtype=float,
         order='F')
-    data_test_x_raw = data_test_x[0]
+    data_input_x_raw = data_input_x[0]
 
     # 3 normal features units/year/num of testers
-    data_test_x_raw[index_testers] = test_testers - norm_testers
-    data_test_x_raw[index_units] = test_units - norm_units
-    data_test_x_raw[index_year] = test_year - norm_year
+    data_input_x_raw[index_testers] = test_testers - norm_testers
+    data_input_x_raw[index_units] = test_units - norm_units
+    data_input_x_raw[index_year] = test_year - norm_year
 
     # take each raw features understand what his is "id"
     # and then assign value at his id position to 1
-    data_test_x_raw[unique_prof_dict[test_profession]] = 1
-    data_test_x_raw[unique_cities_dict[test_city]] = 1
-    data_test_x_raw[unique_schools_dict[test_school]] = 1
+    data_input_x_raw[unique_prof_dict[test_profession]] = 1
+    data_input_x_raw[unique_cities_dict[test_city]] = 1
+    data_input_x_raw[unique_schools_dict[test_school]] = 1
 
-    data_test_y = np.matmul(data_test_x, sess.run(w)) + sess.run(b)
+    data_test_y = np.matmul(data_input_x, sess.run(w)) + sess.run(b)
     print('Estimated Grade {0} \n \n'.format(data_test_y))
