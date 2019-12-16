@@ -124,7 +124,7 @@ sess.run(tf.global_variables_initializer())
 for i in range(0, train_iteration_count):
     # resolve a start and end position according to the batch size
     data_start = batch_size * i % train_records
-    data_end = (batch_size + 1) * i % train_records
+    data_end = batch_size * (i + 1) % train_records
 
     # in case when the end position is bigger then the start
     # because the batch_size is probably not a perfect divider to records amount
