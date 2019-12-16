@@ -27,8 +27,8 @@ norm_units = 2
 norm_year = 2012
 
 # linear regression config
-random_seed = 4
-records = data_frame.size
+random_seed = 5
+records = data_frame.shape[0]
 batch_size = 1000
 train_iteration_print_each = 100
 train_iteration_count = 2500  # 10000
