@@ -1,10 +1,11 @@
-import tensorflow.compat.v1 as tf
+import random
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import random
+import tensorflow.compat.v1 as tf
 import matplotlib.pyplot as plt
-import seaborn as sns  # data visualization
-from pathlib import Path
+import matplotlib.patches as patches
 
 tf.disable_eager_execution()
 school_data_set = pd.read_csv(Path("schoolDBcsv.csv"), encoding='utf-8')
@@ -32,7 +33,7 @@ random_seed = 4
 records = data_frame.shape[0]
 batch_size = 1000
 train_iteration_print_each = 100
-train_iteration_count = 25000  # 10000
+train_iteration_count = 2500  # 10000
 train_percentage = 0.70
 
 # changing column names for easier work.
@@ -131,6 +132,9 @@ test_records = records - train_records
 date_test_x = data_x[train_records:records, :]
 data_test_y = data_y[train_records:records, :]
 
+# graphs for showing train&test plot
+graph_train = []
+graph_test = []
 
 for i in range(0, train_iteration_count):
     # resolve a start and end position according to the batch size
@@ -152,10 +156,33 @@ for i in range(0, train_iteration_count):
 
     # print progress each iteration_print_each iteration's
     if i % train_iteration_print_each == 0:
+        # compute the loss
         loss_train = loss.eval(session=sess, feed_dict={x_: data_train_x, y_: data_train_y})
         loss_test = loss.eval(session=sess, feed_dict={x_: date_test_x, y_: data_test_y})
 
+        # save the loses to show the graph
+        graph_train.append(loss_train)
+        graph_test.append(loss_test)
+
+        # print the loss
         print('Iteration:', i, 'train loss:', loss_train, ' test loss:', loss_test)
+
+# config the plot
+patch_blue = patches.Patch(color='blue', label='Train MSE')
+patch_red = patches.Patch(color='red', label='Test MSE')
+plt.legend(handles=[patch_blue, patch_red])
+plt.grid()
+
+# label the axis
+plt.xlabel('epochs (x{})'.format(100))
+plt.ylabel('MSE [minimize]')
+
+# print the result
+plt.plot(graph_train, color='blue')
+plt.plot(graph_test, color='red')
+
+# show the result
+plt.show()
 
 # input from the user to manual test
 while True:
