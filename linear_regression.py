@@ -6,6 +6,7 @@ import pandas as pd
 import tensorflow.compat.v1 as tf
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import timeit
 
 tf.disable_eager_execution()
 school_data_set = pd.read_csv(Path("schoolDBcsv.csv"), encoding='utf-8')
@@ -32,9 +33,12 @@ norm_year = 2012
 random_seed = 4
 records = data_frame.shape[0]
 batch_size = 1000
-train_iteration_print_each = 250
+train_iteration_print_each = 1000
 train_iteration_count = 25000  # 10000
 train_percentage = 0.85
+
+# time when load data start
+load_data_start_time = timeit.default_timer()
 
 # changing column names for easier work.
 data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
@@ -107,6 +111,10 @@ for index, row in data_frame.iterrows():
     data_raw[unique_cities_dict[row['city_name']]] = 1
     data_raw[unique_schools_dict[row['school_name']]] = 1
 
+# time when load data end
+load_data_end_time = timeit.default_timer()
+print('Loading data Time: ', load_data_end_time - load_data_start_time)
+
 # tensor flow linear regression model
 x_ = tf.placeholder(tf.float32, [None, features])
 y_ = tf.placeholder(tf.float32, [None, 1])
@@ -135,6 +143,9 @@ data_test_y = data_y[train_records:records, :]
 # graphs for showing train&test plot
 graph_train = []
 graph_test = []
+
+# time when train data start
+train_data_start_time = timeit.default_timer()
 
 for i in range(0, train_iteration_count):
     # resolve a start and end position according to the batch size
@@ -166,6 +177,11 @@ for i in range(0, train_iteration_count):
 
         # print the loss
         print('Iteration:', i, 'train loss:', loss_train, ' test loss:', loss_test)
+
+# time when train data end
+train_data_end_time = timeit.default_timer()
+print('Training data Time: ', train_data_end_time - train_data_start_time,
+      " batch size: ", batch_size, " trains: ", train_iteration_count)
 
 # config the plot
 patch_blue = patches.Patch(color='blue', label='Train MSE')
