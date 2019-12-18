@@ -32,8 +32,8 @@ norm_year = 2012
 random_seed = 4
 records = data_frame.shape[0]
 batch_size = 1000
-train_iteration_print_each = 100
-train_iteration_count = 2500  # 10000
+train_iteration_print_each = 250
+train_iteration_count = 25000  # 10000
 train_percentage = 0.70
 
 # changing column names for easier work.
@@ -174,7 +174,7 @@ plt.legend(handles=[patch_blue, patch_red])
 plt.grid()
 
 # label the axis
-plt.xlabel('epochs (x{})'.format(100))
+plt.xlabel('epochs (x{})'.format(train_iteration_print_each))
 plt.ylabel('MSE [minimize]')
 
 # print the result
