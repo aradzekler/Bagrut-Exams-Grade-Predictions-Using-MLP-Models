@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns  # data visualization
 from pathlib import Path
 
-
+tf.disable_eager_execution()
 school_data_set = pd.read_csv(Path("schoolDBcsv.csv"), encoding='utf-8')
 
 '''
@@ -30,9 +30,9 @@ norm_year = 2012
 # linear regression config
 random_seed = 4
 records = data_frame.shape[0]
-batch_size = 10000
+batch_size = 1000
 train_iteration_print_each = 100
-train_iteration_count = 2500  # 10000
+train_iteration_count = 25000  # 10000
 train_percentage = 0.70
 
 # changing column names for easier work.
@@ -152,13 +152,10 @@ for i in range(0, train_iteration_count):
 
     # print progress each iteration_print_each iteration's
     if i % train_iteration_print_each == 0:
-        test_loss = loss.eval(session=sess, feed_dict={x_: date_test_x, y_: data_test_y})
-        #test_error = np.sqrt(test_loss / test_records)
-        print('Iteration:', i, ' loss:', test_loss)
+        loss_train = loss.eval(session=sess, feed_dict={x_: data_train_x, y_: data_train_y})
+        loss_test = loss.eval(session=sess, feed_dict={x_: date_test_x, y_: data_test_y})
 
-        train_loss = loss.eval(session=sess, feed_dict={x_: data_train_x, y_: data_train_y})
-        #train_error = np.sqrt(train_loss / train_records)
-        print('Iteration:', i, ' loss:', train_loss)
+        print('Iteration:', i, 'train loss:', loss_train, ' test loss:', loss_test)
 
 # input from the user to manual test
 while True:
