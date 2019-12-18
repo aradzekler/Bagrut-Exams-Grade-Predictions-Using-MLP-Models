@@ -34,7 +34,7 @@ records = data_frame.shape[0]
 batch_size = 1000
 train_iteration_print_each = 250
 train_iteration_count = 25000  # 10000
-train_percentage = 0.70
+train_percentage = 0.85
 
 # changing column names for easier work.
 data_frame.rename(columns={'Final Grade Average': 'avg_final_grades',
