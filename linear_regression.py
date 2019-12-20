@@ -33,7 +33,7 @@ norm_year = 2012
 random_seed = 4
 records = data_frame.shape[0]
 batch_size = 1000
-train_iteration_print_each = 1000
+train_iteration_print_each = 250
 train_iteration_count = 25000  # 10000
 train_percentage = 0.85
 
@@ -183,6 +183,14 @@ train_data_end_time = timeit.default_timer()
 print('Training data Time: ', train_data_end_time - train_data_start_time,
       " batch size: ", batch_size, " trains: ", train_iteration_count)
 
+# final result from tensor flow
+final_w = sess.run(w)
+
+# saving the model
+np.savetxt("linear_{}_{}_{}_{}.csv".format(batch_size,
+                                           train_percentage, random_seed,
+                                           train_iteration_count), final_w, delimiter=",")
+
 # config the plot
 patch_blue = patches.Patch(color='blue', label='Train MSE')
 patch_red = patches.Patch(color='red', label='Test MSE')
@@ -228,5 +236,5 @@ while True:
     data_input_x_raw[unique_cities_dict[test_city]] = 1
     data_input_x_raw[unique_schools_dict[test_school]] = 1
 
-    data_test_y = np.matmul(data_input_x, sess.run(w)) + sess.run(b)
+    data_test_y = np.matmul(data_input_x, final_w) + sess.run(b)
     print('Estimated Grade {0} \n \n'.format(data_test_y))
