@@ -33,8 +33,8 @@ norm_year = 2012
 random_seed = 4
 records = data_frame.shape[0]
 batch_size = 1000
-train_iteration_print_each = 250
-train_iteration_count = 25000  # 10000
+train_iteration_print_each = 1000
+train_iteration_count = 2300000  # 10000
 train_percentage = 0.85
 
 # time when load data start
